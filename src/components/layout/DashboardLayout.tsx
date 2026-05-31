@@ -8,7 +8,11 @@ export function DashboardLayout() {
     <div className="min-h-screen bg-secondary-50 dark:bg-secondary-900">
       <Header />
       <Sidebar />
-      <main className="pt-16 pl-64 transition-all duration-300">
+      {/*
+        On mobile  : no left padding (sidebar is a drawer overlay)
+        On desktop : pl-64 to offset the fixed sidebar
+      */}
+      <main className="pt-16 md:pl-64 transition-all duration-300">
         <div className="p-4 md:p-6 lg:p-8">
           <Outlet />
         </div>
