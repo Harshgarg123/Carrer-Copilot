@@ -97,7 +97,7 @@ export function QuestionGeneratorPage() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-6 overflow-x-hidden">
       <div>
         <h1 className="text-3xl font-bold text-secondary-900 dark:text-white mb-2">
           Interview Question Generator
@@ -111,7 +111,7 @@ export function QuestionGeneratorPage() {
       {success && <Alert variant="success" onClose={() => setSuccess('')}>{success}</Alert>}
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <Card>
+        <Card className='overflow-hidden'>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HelpCircle className="w-5 h-5" />
@@ -166,15 +166,15 @@ export function QuestionGeneratorPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 overflow-hidden">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <CardTitle>Generated Questions ({filteredQuestions.length})</CardTitle>
               {questions.length > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                   <Filter className="w-4 h-4 text-secondary-400" />
                   <select
-                    className="text-sm bg-transparent border border-secondary-300 dark:border-secondary-600 rounded px-2 py-1 text-secondary-600 dark:text-secondary-400 focus:outline-none"
+                    className="w-full sm:w-auto text-sm bg-transparent border border-secondary-300 dark:border-secondary-600 rounded px-2 py-1 text-secondary-600 dark:text-secondary-400 focus:outline-none"
                     value={filter.difficulty}
                     onChange={(e) => setFilter({ ...filter, difficulty: e.target.value })}
                   >
@@ -185,7 +185,7 @@ export function QuestionGeneratorPage() {
                   </select>
                   {categories.length > 0 && (
                     <select
-                      className="text-sm bg-transparent border border-secondary-300 dark:border-secondary-600 rounded px-2 py-1 text-secondary-600 dark:text-secondary-400 focus:outline-none"
+                      className="w-full sm:w-auto text-sm bg-transparent border border-secondary-300 dark:border-secondary-600 rounded px-2 py-1 text-secondary-600 dark:text-secondary-400 focus:outline-none"
                       value={filter.category}
                       onChange={(e) => setFilter({ ...filter, category: e.target.value })}
                     >
@@ -201,15 +201,15 @@ export function QuestionGeneratorPage() {
           </CardHeader>
           <CardContent>
             {filteredQuestions.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-3 break-words overflow-hidden">
                 {filteredQuestions.map((q, i) => (
                   <div
                     key={q.id}
-                    className="p-4 bg-secondary-50 dark:bg-secondary-800 rounded-lg"
+                    className="p-4 bg-secondary-50 dark:bg-secondary-800 rounded-lg overflow-hidden"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
                           <Badge
                             variant={
                               q.difficulty === 'easy' ? 'success' :
@@ -218,13 +218,20 @@ export function QuestionGeneratorPage() {
                           >
                             {q.difficulty}
                           </Badge>
-                          {q.category && <Badge variant="secondary">{q.category}</Badge>}
+                          {q.category && (
+  <Badge
+    variant="secondary"
+    className="max-w-full break-words whitespace-normal text-center"
+  >
+    {q.category}
+  </Badge>
+)}
                         </div>
-                        <p className="text-secondary-900 dark:text-white">
+                        <p className="text-secondary-900 dark:text-white break-words whitespace-pre-wrap overflow-hidden">
                           {q.question}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-shrink-0">
                         <button
                           onClick={() => copyQuestion(q.id, q.question)}
                           className="p-2 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-colors"
@@ -254,7 +261,7 @@ export function QuestionGeneratorPage() {
 
                     {expandedId === q.id && q.hint && (
                       <div className="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
-                        <p className="text-sm text-secondary-500 dark:text-secondary-400">
+                        <p className="text-sm text-secondary-500 dark:text-secondary-400 break-words whitespace-pre-wrap">
                           <strong>Hint:</strong> {q.hint}
                         </p>
                       </div>
@@ -267,7 +274,7 @@ export function QuestionGeneratorPage() {
                 No questions match your filters
               </div>
             ) : (
-              <div className="text-center py-12">
+              <div className="text-center py-12 px-4">
                 <HelpCircle className="w-12 h-12 text-secondary-300 dark:text-secondary-600 mx-auto mb-4" />
                 <p className="text-secondary-600 dark:text-secondary-400">
                   Configure and generate questions to practice

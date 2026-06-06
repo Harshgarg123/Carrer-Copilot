@@ -90,13 +90,17 @@ export async function evaluateInterviewAnswer(
   questionId: string,
   question: string,
   answer: string,
-  interviewId: string
+  interviewId: string,
+  category?: string,
+  difficulty?: string,
 ) {
   return callEdgeFunction<any>('evaluate-answer', {
     questionId,
     question,
     answer,
     interviewId,
+    category,
+    difficulty,
   });
 }
 

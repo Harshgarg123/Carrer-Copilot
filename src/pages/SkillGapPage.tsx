@@ -221,7 +221,7 @@ function SkillGapContent() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Input */}
-        <Card>
+        <Card className='overflow-hidden'>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
@@ -239,7 +239,7 @@ function SkillGapContent() {
             <div>
               <label className="label">Current Skills</label>
               <textarea
-                className="input min-h-[120px]"
+                className="input min-h-[120px] w-full resize-y"
                 placeholder="Enter your skills separated by commas&#10;e.g., JavaScript, React, Node.js, SQL"
                 value={currentSkills}
                 onChange={e => setCurrentSkills(e.target.value)}
@@ -259,7 +259,7 @@ function SkillGapContent() {
         </Card>
 
         {/* Results */}
-        <Card>
+        <Card className='overflow-hidden'>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Analysis Results
@@ -348,7 +348,7 @@ function SkillGapContent() {
                       {result!.priority_skills.map((skill, i) => (
                         <li key={i} className="flex items-center gap-2 p-2 bg-secondary-50 dark:bg-secondary-800 rounded-lg">
                           <ArrowRight className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                          <span className="text-secondary-700 dark:text-secondary-300">{skill}</span>
+                          <span className="text-secondary-700 dark:text-secondary-300 break-words">{skill}</span>
                         </li>
                       ))}
                     </ul>
@@ -360,12 +360,12 @@ function SkillGapContent() {
                     <h4 className="font-semibold text-secondary-900 dark:text-white mb-3">
                       Recommendations
                     </h4>
-                    <div className="space-y-3">
+                    <div className="space-y-3 break-words overflow-hidden">
                       {result!.recommendations.map((rec, i) => (
                         <div key={i} className="p-4 bg-secondary-50 dark:bg-secondary-800 rounded-lg">
                           <div className="flex items-start gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
-                            <p className="text-sm text-secondary-600 dark:text-secondary-300 leading-relaxed">
+                            <p className="text-sm text-secondary-600 dark:text-secondary-300 leading-relaxed break-words whitespace-pre-wrap overflow-hidden">
                               {rec}
                             </p>
                           </div>

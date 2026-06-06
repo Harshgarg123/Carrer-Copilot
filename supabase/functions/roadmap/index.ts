@@ -18,6 +18,8 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const { currentSkills, targetRole, duration } = body;
 
+    const skillsList = (currentSkills || []).join(', ');
+
     const defaultMilestones = [
       { week: 1, title: "Foundation Building", objectives: ["Set up development environment", "Review core concepts", "Create study plan"], resources: ["Documentation", "Online courses"] },
       { week: 2, title: "Core Skills Development", objectives: ["Learn fundamental frameworks", "Build practice projects", "Code review best practices"], resources: ["Tutorials", "GitHub examples"] },
@@ -32,9 +34,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const systemPrompt = `You are a learning roadmap generator. Create a structured learning plan. Return JSON with:
-1. milestones (array of {week: number, title: string, objectives: array, resources: array})
-2. estimated_duration (string)`;
+    // ── KEY FIX: explicitly tell the model which skills the user already has
+    // and instruct it to skip those entirely from the roadmap.
+    const systemPrompt = `You are a personalized learning roadmap generator.
+
+CRITICAL RULES:
+1. The user ALREADY KNOWS the skills listed under "Current Skills". Do NOT include those skills as learning objectives. Do NOT suggest tutorials, courses, or practice for skills they already have.
+2. Only generate milestones for NEW skills, tools, concepts, or gaps that the user needs to reach the target role and does NOT already know.
+3. Each milestone must be meaningfully different — covering a new topic or skill area.
+4. Keep objectives specific and actionable.
+5. Resources should be real, specific learning materials (e.g. "MDN Web Docs", "CS50 on edX", "Eloquent JavaScript") — not generic labels like "Online courses".
+
+Return a JSON object with:
+- milestones: array of { week: number, title: string, objectives: string[], resources: string[] }
+- estimated_duration: string`;
+
+    const userMessage = `Current Skills (ALREADY KNOWN — do NOT teach these): ${skillsList}
+Target Role: ${targetRole}
+Desired Duration: ${duration}
+
+Generate a roadmap that only covers what this person still needs to learn to become a ${targetRole}. Skip everything they already know.`;
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
@@ -46,11 +65,11 @@ Deno.serve(async (req: Request) => {
         model: 'llama-3.1-8b-instant',
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Skills: ${(currentSkills || []).join(', ')}\nTarget: ${targetRole}\nDuration: ${duration}` }
+          { role: "user", content: userMessage },
         ],
         max_tokens: 2048,
         temperature: 0.7,
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -66,7 +85,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         milestones: result.milestones || defaultMilestones,
-        estimated_duration: result.estimated_duration || duration || "3 months"
+        estimated_duration: result.estimated_duration || duration || "3 months",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -13,9 +13,70 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 /** Safely coerce any AI value to a string array */
 function toStringArray(value: unknown): string[] {
   if (!value) return [];
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (typeof value === 'string') return value.split(',').map(s => s.trim()).filter(Boolean);
-  if (typeof value === 'object') return Object.values(value as object).map(String).filter(Boolean);
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      if (typeof item === 'string') {
+        return [item];
+      }
+
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, any>;
+
+        if (obj.title && obj.url) {
+          return [`${obj.title}|${obj.url}`];
+        }
+
+        if (obj.name) {
+          return [String(obj.name)];
+        }
+
+        if (obj.title) {
+          return [String(obj.title)];
+        }
+
+        return Object.values(obj)
+          .filter((v) => typeof v === 'string')
+          .map(String);
+      }
+
+      return [String(item)];
+    });
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, any>).flatMap((v) => {
+      if (typeof v === 'string') {
+        return [v];
+      }
+
+      if (typeof v === 'object' && v !== null) {
+        const obj = v as Record<string, any>;
+
+        if (obj.title && obj.url) {
+          return [`${obj.title}|${obj.url}`];
+        }
+
+        if (obj.name) {
+          return [String(obj.name)];
+        }
+
+        if (obj.title) {
+          return [String(obj.title)];
+        }
+      }
+
+      return [];
+    });
+  }
+
   return [];
 }
 
@@ -110,10 +171,10 @@ function RoadmapContent() {
           progress: 0,
         });
         await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'roadmap',
-          title: `Generated roadmap for ${targetRole}`,
-        });
+  user_id: user.id,
+  activity_type: 'learning_roadmap',
+  title: `Generated roadmap for ${targetRole}`,
+});
       }
 
       setSuccess('Roadmap generated!');
@@ -272,17 +333,37 @@ function RoadmapContent() {
                     )}
 
                     {milestone.resources.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {milestone.resources.map((res, k) => (
-                          <span
-                            key={k}
-                            className="text-xs px-2 py-1 bg-secondary-100 dark:bg-secondary-700 rounded-full text-secondary-600 dark:text-secondary-400"
-                          >
-                            📚 {res}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+  <div className="flex flex-wrap gap-2">
+    {milestone.resources.map((res, k) => {
+      const parts = res.split('|');
+
+      if (parts.length === 2) {
+        const [title, url] = parts;
+
+        return (
+          <a
+            key={k}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs px-3 py-1 bg-primary-100 dark:bg-primary-900/30 rounded-full text-primary-700 dark:text-primary-300 hover:underline"
+          >
+            📚 {title}
+          </a>
+        );
+      }
+
+      return (
+        <span
+          key={k}
+          className="text-xs px-3 py-1 bg-secondary-100 dark:bg-secondary-700 rounded-full text-secondary-600 dark:text-secondary-400"
+        >
+          📚 {res}
+        </span>
+      );
+    })}
+  </div>
+)}
                   </div>
                 ))}
               </div>

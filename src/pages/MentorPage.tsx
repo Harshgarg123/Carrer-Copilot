@@ -78,6 +78,15 @@ export function MentorPage() {
       setLoading(false);
     }
   };
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+  if (textareaRef.current) {
+    textareaRef.current.style.height = 'auto';
+    textareaRef.current.style.height =
+      textareaRef.current.scrollHeight + 'px';
+  }
+}, [input]);
+
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -97,8 +106,8 @@ export function MentorPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-secondary-900 dark:text-white mb-2">
             AI Career Mentor
@@ -107,20 +116,25 @@ export function MentorPage() {
             Get personalized career advice and guidance
           </p>
         </div>
-        <Button variant="ghost" onClick={clearChat} leftIcon={<Trash2 className="w-4 h-4" />}>
+        <Button
+        variant="ghost"
+        onClick={clearChat}
+        leftIcon={<Trash2 className="w-4 h-4" />}
+        className="w-full sm:w-auto"
+        >
           Clear
         </Button>
       </div>
 
       {error && <Alert variant="error" onClose={() => setError('')}>{error}</Alert>}
 
-      <Card className="h-[calc(100vh-280px)] flex flex-col">
-        <CardContent className="flex-1 overflow-y-auto pt-6">
-          <div className="space-y-4">
+      <Card className="h-[calc(100vh-220px)] sm:h-[calc(100vh-280px)] flex flex-col overflow-hidden">
+        <CardContent className="flex-1 overflow-y-auto overflow-x-hidden pt-4 sm:pt-6">
+          <div className="space-y-4 break-words">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}
+                className={`flex flex-col sm:flex-row gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}
               >
                 {message.role === 'assistant' && (
                   <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
@@ -128,14 +142,14 @@ export function MentorPage() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                  className={`max-w-[92%] sm:max-w-[80%] rounded-xl px-4 py-3 overflow-hidden ${
                     message.role === 'user'
                       ? 'bg-primary-600 text-white'
                       : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-900 dark:text-secondary-100'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p className={`text-xs mt-2 ${
+                  <p className="text-sm whitespace-pre-wrap break-words overflow-hidden leading-relaxed">{message.content}</p>
+                  <p className={`text-xs mt-2 break-words ${
                     message.role === 'user'
                       ? 'text-primary-200'
                       : 'text-secondary-500 dark:text-secondary-400'
@@ -152,11 +166,11 @@ export function MentorPage() {
             ))}
 
             {loading && (
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
                   <Bot className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                 </div>
-                <div className="bg-secondary-100 dark:bg-secondary-800 rounded-xl px-4 py-3">
+                <div className="bg-secondary-100 dark:bg-secondary-800 rounded-xl px-4 py-3 shadow-sm">
                   <Loader2 className="w-5 h-5 animate-spin text-secondary-400" />
                 </div>
               </div>
@@ -166,21 +180,21 @@ export function MentorPage() {
           </div>
         </CardContent>
 
-        <div className="p-4 border-t border-secondary-200 dark:border-secondary-700">
-          <div className="flex gap-3">
+        <div className="p-3 sm:p-4 border-t border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900">
+          <div className="flex flex-col sm:flex-row gap-3">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask about resumes, interviews, or career advice..."
-              className="flex-1 px-4 py-3 bg-white dark:bg-secondary-800 border border-secondary-300 dark:border-secondary-600 rounded-xl text-secondary-900 dark:text-secondary-100 placeholder-secondary-400 dark:placeholder-secondary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="w-full flex-1 min-h-[52px] max-h-[180px] px-4 py-3 bg-white dark:bg-secondary-800 border border-secondary-300 dark:border-secondary-600 rounded-xl text-secondary-900 dark:text-secondary-100 placeholder-secondary-400 dark:placeholder-secondary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-y"
               rows={1}
               disabled={loading}
             />
             <Button
               onClick={sendMessage}
               disabled={!input.trim() || loading}
-              className="self-end"
+              className="w-full sm:w-auto self-end"
             >
               <Send className="w-4 h-4" />
             </Button>

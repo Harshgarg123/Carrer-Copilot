@@ -264,9 +264,9 @@ export function MockInterviewPage() {
   const totalQuestions = questions.length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-0 space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-secondary-900 dark:text-white mb-2">Mock Interview</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-secondary-900 dark:text-white mb-2 break-words">Mock Interview</h1>
         <p className="text-secondary-600 dark:text-secondary-400">Practice with AI-generated interview questions</p>
       </div>
 
@@ -283,9 +283,9 @@ export function MockInterviewPage() {
             {/* Role selector */}
             <div>
               <label className="label">Target Role</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
-                  className="input flex-1"
+                  className="input flex-1 w-full min-w-0"
                   value={role}
                   onChange={e => setRole(e.target.value)}
                 >
@@ -302,7 +302,7 @@ export function MockInterviewPage() {
                 </select>
                 <button
                   onClick={() => { setShowAddRole(v => !v); setAddRoleError(''); setNewRoleName(''); }}
-                  className="flex items-center gap-1 px-3 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+                  className="flex items-center justify-center gap-1 px-3 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors w-full sm:w-auto"
                   title="Add custom role"
                 >
                   <Plus className="w-4 h-4" />
@@ -314,10 +314,10 @@ export function MockInterviewPage() {
               {showAddRole && (
                 <div className="mt-3 p-4 border border-primary-200 dark:border-primary-800 rounded-xl bg-primary-50 dark:bg-primary-900/20 space-y-3">
                   <p className="text-sm font-medium text-secondary-900 dark:text-white">Add Custom Role</p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
-                      className="input flex-1"
+                      className="input flex-1 w-full"
                       placeholder="e.g., Site Reliability Engineer"
                       value={newRoleName}
                       onChange={e => { setNewRoleName(e.target.value); setAddRoleError(''); }}
@@ -326,13 +326,13 @@ export function MockInterviewPage() {
                     />
                     <button
                       onClick={handleAddRole}
-                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      className="w-full sm:w-auto px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       Add
                     </button>
                     <button
                       onClick={() => { setShowAddRole(false); setAddRoleError(''); setNewRoleName(''); }}
-                      className="px-3 py-2 bg-secondary-200 dark:bg-secondary-700 hover:bg-secondary-300 dark:hover:bg-secondary-600 rounded-lg text-sm transition-colors"
+                      className="w-full sm:w-auto px-3 py-2 bg-secondary-200 dark:bg-secondary-700 hover:bg-secondary-300 dark:hover:bg-secondary-600 rounded-lg text-sm transition-colors"
                     >
                       Cancel
                     </button>
@@ -351,7 +351,7 @@ export function MockInterviewPage() {
                     {customRoles.map(r => (
                       <span
                         key={r}
-                        className="flex items-center gap-1 px-3 py-1 bg-secondary-100 dark:bg-secondary-700 rounded-full text-sm text-secondary-700 dark:text-secondary-300"
+                        className="flex items-center gap-1 px-3 py-1 bg-secondary-100 dark:bg-secondary-700 rounded-full text-sm text-secondary-700 dark:text-secondary-300 max-w-full break-all"
                       >
                         {r}
                         <button
@@ -404,18 +404,20 @@ export function MockInterviewPage() {
       {/* ── INTERVIEW ── */}
       {step === 'interview' && currentQuestion && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <Badge variant="primary">Question {currentQuestionIndex + 1} of {totalQuestions}</Badge>
-            <div className="flex items-center gap-2 text-sm text-secondary-600 dark:text-secondary-400">
+            <div className="flex items-center gap-2 text-sm text-secondary-600 dark:text-secondary-400 break-all">
               <Clock className="w-4 h-4" />
               {currentQuestion.category}
             </div>
           </div>
 
-          <Progress value={(currentQuestionIndex / totalQuestions) * 100} />
+          <div className="w-full overflow-hidden">
+  <Progress value={(currentQuestionIndex / totalQuestions) * 100} />
+</div>
 
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="pt-6 space-y-4 overflow-hidden">
               <Badge variant={
                 currentQuestion.difficulty === 'easy' ? 'success' :
                 currentQuestion.difficulty === 'medium' ? 'warning' : 'error'
@@ -423,7 +425,7 @@ export function MockInterviewPage() {
                 {currentQuestion.difficulty}
               </Badge>
 
-              <h2 className="text-xl font-semibold text-secondary-900 dark:text-white">
+              <h2 className="text-lg sm:text-xl font-semibold text-secondary-900 dark:text-white break-words leading-relaxed">
                 {currentQuestion.question}
               </h2>
 
@@ -431,7 +433,7 @@ export function MockInterviewPage() {
                 placeholder="Type your answer here…"
                 value={answers[currentQuestion.id] || ''}
                 onChange={e => setAnswers(prev => ({ ...prev, [currentQuestion.id]: e.target.value }))}
-                className="min-h-[150px]"
+                className="min-h-[180px] sm:min-h-[150px] w-full"
               />
 
               <Button
@@ -450,8 +452,8 @@ export function MockInterviewPage() {
             <Card>
               <CardHeader><CardTitle>Feedback</CardTitle></CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="text-3xl font-bold text-primary-600 dark:text-primary-400">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                  <div className="text-center sm:text-left text-2xl sm:text-3xl font-bold text-primary-600 dark:text-primary-400">
                     {evaluations[currentQuestion.id].score}/100
                   </div>
                   <Progress value={evaluations[currentQuestion.id].score} className="flex-1" />
@@ -462,7 +464,7 @@ export function MockInterviewPage() {
                     <p className="text-sm font-medium text-success-600 dark:text-success-400 mb-2">Strengths</p>
                     <ul className="space-y-1">
                       {evaluations[currentQuestion.id].strengths.map((s, i) => (
-                        <li key={i} className="text-sm text-secondary-600 dark:text-secondary-400">+ {s}</li>
+                        <li key={i} className="text-sm text-secondary-600 dark:text-secondary-400 break-words leading-relaxed">+ {s}</li>
                       ))}
                     </ul>
                   </div>
@@ -473,7 +475,7 @@ export function MockInterviewPage() {
                     <p className="text-sm font-medium text-primary-600 dark:text-primary-400 mb-2">Suggestions</p>
                     <ul className="space-y-1">
                       {evaluations[currentQuestion.id].suggestions.map((s, i) => (
-                        <li key={i} className="text-sm text-secondary-600 dark:text-secondary-400">{s}</li>
+                        <li key={i} className="text-sm text-secondary-600 dark:text-secondary-400 break-words leading-relaxed">{s}</li>
                       ))}
                     </ul>
                   </div>
@@ -491,7 +493,7 @@ export function MockInterviewPage() {
             <CardContent className="pt-6 text-center">
               <Award className="w-16 h-16 text-warning-500 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-secondary-900 dark:text-white mb-2">Interview Complete!</h2>
-              <div className="text-5xl font-bold gradient-text mb-2">
+              <div className="text-4xl sm:text-5xl font-bold gradient-text mb-2 break-words">
                 {Math.round(
                   Object.values(evaluations).reduce((sum, e) => sum + e.score, 0) /
                   Math.max(Object.values(evaluations).length, 1)
@@ -508,17 +510,17 @@ export function MockInterviewPage() {
             {questions.map((q, i) => (
               <Card key={q.id}>
                 <CardContent className="pt-5">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="flex-1">
                       <Badge variant="secondary" className="mb-2">Q{i + 1}</Badge>
-                      <p className="text-secondary-900 dark:text-white font-medium">{q.question}</p>
+                      <p className="text-secondary-900 dark:text-white font-medium break-words leading-relaxed">{q.question}</p>
                       {answers[q.id] && (
-                        <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-2">
+                        <p className="text-sm text-secondary-600 dark:text-secondary-400 mt-2 break-words whitespace-pre-wrap">
                           Your answer: {answers[q.id].substring(0, 100)}…
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                       <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
                         {evaluations[q.id]?.score || 0}
                       </div>
