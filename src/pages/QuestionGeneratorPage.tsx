@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { HelpCircle, RefreshCw, Filter, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { generateQuestions } from '../lib/api';
+import { generateQuestions, saveRecord, logActivity } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -48,25 +47,20 @@ export function QuestionGeneratorPage() {
         source === 'skills' ? skill : undefined
       );
 
-      if (response.error) {
-        throw new Error(response.error);
+      if (response.error || !response.data) {
+        throw new Error(response.error || 'No response from server');
       }
 
       setQuestions(response.data.questions || []);
 
       if (user) {
-        await supabase.from('generated_questions').insert({
-          user_id: user.id,
+        await saveRecord('generated_questions', {
           source,
           category: source === 'role' ? targetRole : source === 'skills' ? skill : 'general',
           questions: response.data.questions || [],
         });
 
-        await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'question_generation',
-          title: `Generated ${source === 'role' ? targetRole : source === 'skills' ? skill : 'general'} questions`,
-        });
+        await logActivity('question_generation', `Generated ${source === 'role' ? targetRole : source === 'skills' ? skill : 'general'} questions`);
       }
 
       setSuccess(`Generated ${response.data.questions?.length || 0} questions!`);
@@ -202,7 +196,7 @@ export function QuestionGeneratorPage() {
           <CardContent>
             {filteredQuestions.length > 0 ? (
               <div className="space-y-3 break-words overflow-hidden">
-                {filteredQuestions.map((q, i) => (
+                {filteredQuestions.map((q) => (
                   <div
                     key={q.id}
                     className="p-4 bg-secondary-50 dark:bg-secondary-800 rounded-lg overflow-hidden"

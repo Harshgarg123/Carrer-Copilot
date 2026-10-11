@@ -1,184 +1,133 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { authApi, tokenStore, UNAUTHORIZED_EVENT, type ApiUser } from '../lib/api';
+
+export type UserProfile = ApiUser;
 
 interface AuthContextType {
-  session: Session | null;
-  user: User | null;
+  user: UserProfile | null;
   profile: UserProfile | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  confirmPasswordReset: (token: string, password: string) => Promise<{ error: Error | null }>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
-}
-
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name?: string;
-  avatar_url?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+  const loadCurrentUser = useCallback(async () => {
+    if (!tokenStore.get()) {
+      setUser(null);
+      return;
+    }
+    const { data, error, status } = await authApi.me();
+    if (data?.user) {
+      setUser(data.user);
+    } else if (status === 401) {
+      tokenStore.clear();
+      setUser(null);
+    } else if (error) {
+      // Server unreachable: keep the session token, but there is no user to show yet
+      console.error('Error loading session:', error);
+      setUser(null);
     }
   }, []);
 
+  // Restore the session on first load
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error getting session:', error);
+        await loadCurrentUser();
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-
-    getInitialSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          // Use async IIFE to avoid blocking the callback
-          (async () => {
-            await fetchProfile(session.user.id);
-          })();
-        } else {
-          setProfile(null);
-        }
-
-        // Only set loading false after initial session check
-        if (event !== 'INITIAL_SESSION') {
-          setLoading(false);
-        }
-      }
-    );
-
+    })();
     return () => {
-      subscription.unsubscribe();
+      cancelled = true;
     };
-  }, [fetchProfile]);
+  }, [loadCurrentUser]);
+
+  // Sign out when any API call reports an expired session, and keep tabs in sync
+  useEffect(() => {
+    const onUnauthorized = () => setUser(null);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== tokenStore.key) return;
+      if (!e.newValue) setUser(null);
+      else loadCurrentUser();
+    };
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [loadCurrentUser]);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-      return { error: error as Error | null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    const { data, error } = await authApi.signUp(email, password, fullName);
+    if (error || !data) return { error: new Error(error || 'Failed to create account') };
+    tokenStore.set(data.token);
+    setUser(data.user);
+    return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error: error as Error | null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    const { data, error } = await authApi.signIn(email, password);
+    if (error || !data) return { error: new Error(error || 'Failed to sign in') };
+    tokenStore.set(data.token);
+    setUser(data.user);
+    return { error: null };
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-    setSession(null);
+    tokenStore.clear();
     setUser(null);
-    setProfile(null);
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      return { error: error as Error | null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    const { error } = await authApi.forgotPassword(email);
+    return { error: error ? new Error(error) : null };
+  };
+
+  const confirmPasswordReset = async (token: string, password: string) => {
+    const { error } = await authApi.resetPassword(token, password);
+    return { error: error ? new Error(error) : null };
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    try {
-      if (!user) throw new Error('No user logged in');
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-
-      if (error) throw error;
-      await fetchProfile(user.id);
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    if (!user) return { error: new Error('No user logged in') };
+    const { data, error } = await authApi.updateProfile({
+      full_name: updates.full_name,
+      avatar_url: updates.avatar_url,
+    });
+    if (error || !data) return { error: new Error(error || 'Failed to update profile') };
+    setUser(data.user);
+    return { error: null };
   };
 
   const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
+    await loadCurrentUser();
   };
 
   return (
     <AuthContext.Provider
       value={{
-        session,
         user,
-        profile,
+        profile: user,
         loading,
         signUp,
         signIn,
         signOut,
         resetPassword,
+        confirmPasswordReset,
         updateProfile,
         refreshProfile,
       }}

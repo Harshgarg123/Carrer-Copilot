@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, FileText, Trash2, RefreshCw, Award, AlertTriangle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { analyzeResume } from '../lib/api';
+import { analyzeResume, resumesApi } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Progress } from '../components/ui/Progress';
@@ -45,16 +44,12 @@ export function ResumePage() {
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error: fetchError } = await supabase
-        .from('resumes')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const { data, error: fetchError } = await resumesApi.list();
 
-      if (fetchError) throw fetchError;
-      setResumes(data || []);
-      if (data && data.length > 0) {
-        setSelectedResume(data[0]);
+      if (fetchError || !data) throw new Error(fetchError || 'Failed to load resumes');
+      setResumes(data.resumes);
+      if (data.resumes.length > 0) {
+        setSelectedResume(data.resumes[0]);
       }
     } catch (err) {
       setError('Failed to load resumes');
@@ -76,9 +71,15 @@ export function ResumePage() {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword'
     ];
+    const hasAllowedExtension = /\.(pdf|docx?)$/i.test(file.name);
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!allowedTypes.includes(file.type) && !hasAllowedExtension) {
       setError('Please upload a PDF or DOCX file');
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      setError('File is too large. Maximum size is 4MB');
       return;
     }
 
@@ -86,45 +87,16 @@ export function ResumePage() {
     setError('');
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const { data, error: uploadError } = await resumesApi.upload(file);
 
-      const { error: uploadError } = await supabase.storage
-        .from('resumes')
-        .upload(fileName, file);
+      if (uploadError || !data) throw new Error(uploadError || 'Upload failed');
 
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('resumes')
-        .getPublicUrl(fileName);
-
-      const { data: resumeData, error: insertError } = await supabase
-        .from('resumes')
-        .insert({
-          user_id: user.id,
-          file_name: file.name,
-          file_url: publicUrl,
-          extracted_data: {},
-          score: 0,
-          ats_score: 0,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      setResumes([resumeData, ...resumes]);
-      setSelectedResume(resumeData);
+      setResumes(prev => [data.resume, ...prev]);
+      setSelectedResume(data.resume);
+      setAnalysis(null);
       setSuccess('Resume uploaded successfully!');
-
-      await supabase.from('user_activities').insert({
-        user_id: user.id,
-        activity_type: 'resume_upload',
-        title: `Uploaded resume: ${file.name}`,
-      });
-    } catch (err) {
-      setError('Failed to upload resume. Please try again.');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to upload resume. Please try again.');
       console.error(err);
     } finally {
       setUploading(false);
@@ -155,28 +127,12 @@ export function ResumePage() {
       const analysisData = result.data;
       setAnalysis(analysisData);
 
-      // Update resume scores
-      await supabase
-        .from('resumes')
-        .update({
-          score: analysisData.overall_score,
-          ats_score: analysisData.ats_score,
-        })
-        .eq('id', selectedResume.id);
-
-      // Update local state
+      // The server already saved the scores and logged the activity; just refresh local state
       setResumes(prev => prev.map(r =>
         r.id === selectedResume.id
           ? { ...r, score: analysisData.overall_score, ats_score: analysisData.ats_score }
           : r
       ));
-
-      await supabase.from('user_activities').insert({
-        user_id: user!.id,
-        activity_type: 'resume_analysis',
-        title: `Analyzed resume: ${selectedResume.file_name}`,
-        metadata: { score: analysisData.overall_score },
-      });
 
       setSuccess('Resume analyzed successfully!');
     } catch (err: any) {
@@ -189,7 +145,8 @@ export function ResumePage() {
 
   const deleteResume = async (resumeId: string) => {
     try {
-      await supabase.from('resumes').delete().eq('id', resumeId);
+      const { error: deleteError } = await resumesApi.remove(resumeId);
+      if (deleteError) throw new Error(deleteError);
       const updatedResumes = resumes.filter(r => r.id !== resumeId);
       setResumes(updatedResumes);
 
@@ -248,7 +205,7 @@ export function ResumePage() {
               Drop your resume here or click to browse
             </p>
             <p className="text-sm text-secondary-500 dark:text-secondary-400">
-              Supports PDF, DOCX up to 10MB
+              Supports PDF, DOCX up to 4MB
             </p>
           </div>
         </CardContent>
@@ -436,16 +393,16 @@ export function ResumePage() {
                 >
                   {analysis ? 'Re-analyze' : 'Analyze'}
                 </Button>
-                <a
-                  href={selectedResume.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={async () => {
+                    const openError = await resumesApi.open(selectedResume.id);
+                    if (openError) setError(openError);
+                  }}
                 >
-                  <Button variant="outline" className="w-full">
-                    View Resume
-                  </Button>
-                </a>
+                  View Resume
+                </Button>
               </CardContent>
             </Card>
 

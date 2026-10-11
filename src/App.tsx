@@ -9,6 +9,7 @@ import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 // Dashboard
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -80,6 +81,7 @@ function AppRoutes() {
       />
 
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Protected Dashboard Routes */}
       <Route

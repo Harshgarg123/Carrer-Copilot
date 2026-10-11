@@ -1,12 +1,10 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Brain,
   FileText,
   Target,
   MessageSquare,
   TrendingUp,
-  Map,
   Github,
   MessageCircle,
   ArrowRight,

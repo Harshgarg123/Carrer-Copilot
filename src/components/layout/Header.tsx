@@ -13,7 +13,6 @@ export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const isLandingPage = location.pathname === '/';
-  const isDashboard = location.pathname.startsWith('/dashboard');
 
   const handleSignOut = async () => {
     setIsProfileOpen(false);

@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FileEdit, Copy, Download, RefreshCw, Check } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { generateCoverLetter } from '../lib/api';
+import { generateCoverLetter, saveRecord, logActivity } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Textarea } from '../components/ui/Textarea';
@@ -39,25 +38,20 @@ export function CoverLetterPage() {
         additionalInfo
       );
 
-      if (response.error) {
-        throw new Error(response.error);
+      if (response.error || !response.data) {
+        throw new Error(response.error || 'No response from server');
       }
 
       setGeneratedLetter(response.data.content);
 
       if (user) {
-        await supabase.from('cover_letters').insert({
-          user_id: user.id,
+        await saveRecord('cover_letters', {
           job_title: jobTitle,
           company: company,
           content: response.data.content,
         });
 
-        await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'cover_letter',
-          title: `Generated cover letter for ${jobTitle} at ${company}`,
-        });
+        await logActivity('cover_letter', `Generated cover letter for ${jobTitle} at ${company}`);
       }
 
       setSuccess('Cover letter generated!');

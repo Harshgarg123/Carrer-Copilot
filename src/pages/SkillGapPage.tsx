@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TrendingUp, Target, ArrowRight, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { analyzeSkillGap } from '../lib/api';
+import { analyzeSkillGap, saveRecord, logActivity } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -175,19 +174,14 @@ function SkillGapContent() {
       setResult(data);
 
       if (user) {
-        await supabase.from('skill_gap_analyses').insert({
-          user_id: user.id,
+        await saveRecord('skill_gap_analyses', {
           current_skills: skillsArray,
           target_role: targetRole,
           missing_skills: data.missing_skills,
           priority_skills: data.priority_skills,
           recommendations: data.recommendations,
         });
-        await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'skill_gap',
-          title: `Analyzed gap for ${targetRole}`,
-        });
+        await logActivity('skill_gap', `Analyzed gap for ${targetRole}`);
       }
 
       setSuccess('Analysis complete!');

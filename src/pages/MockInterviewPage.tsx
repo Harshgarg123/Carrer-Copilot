@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Clock, Award, ChevronRight, Plus, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { generateInterviewQuestions, evaluateInterviewAnswer } from '../lib/api';
+import { generateInterviewQuestions, evaluateInterviewAnswer, interviewsApi, customRolesApi } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Textarea } from '../components/ui/Textarea';
@@ -58,18 +57,13 @@ export function MockInterviewPage() {
   const [newRoleName, setNewRoleName] = useState('');
   const [addRoleError, setAddRoleError] = useState('');
 
-  // Load custom roles from Supabase (falls back to localStorage)
+  // Load custom roles from the API (falls back to localStorage if the server is unreachable)
   useEffect(() => {
     async function loadCustomRoles() {
       if (user) {
-        const { data } = await supabase
-          .from('user_custom_roles')
-          .select('role_name')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: true });
-
-        if (data && data.length > 0) {
-          setCustomRoles(data.map(r => r.role_name));
+        const { data } = await customRolesApi.list();
+        if (data) {
+          setCustomRoles(data.roles);
           return;
         }
       }
@@ -104,10 +98,7 @@ export function MockInterviewPage() {
 
     // Persist
     if (user) {
-      await supabase.from('user_custom_roles').insert({
-        user_id: user.id,
-        role_name: trimmed,
-      });
+      await customRolesApi.add(trimmed);
     } else {
       localStorage.setItem(CUSTOM_ROLES_KEY, JSON.stringify(updated));
     }
@@ -119,11 +110,7 @@ export function MockInterviewPage() {
     if (role === roleToDelete) setRole(DEFAULT_ROLES[0]);
 
     if (user) {
-      await supabase
-        .from('user_custom_roles')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('role_name', roleToDelete);
+      await customRolesApi.remove(roleToDelete);
     } else {
       localStorage.setItem(CUSTOM_ROLES_KEY, JSON.stringify(updated));
     }
@@ -135,25 +122,15 @@ export function MockInterviewPage() {
 
     try {
       const response = await generateInterviewQuestions(role, experienceLevel, difficulty);
-      if (response.error) throw new Error(response.error);
+      if (response.error || !response.data) throw new Error(response.error || 'No response from server');
 
       setQuestions(response.data.questions);
       setStep('interview');
 
       if (user) {
-        const { data: interviewData } = await supabase
-          .from('mock_interviews')
-          .insert({ user_id: user.id, role, experience_level: experienceLevel, difficulty, status: 'in_progress' })
-          .select('id')
-          .single();
+        const { data: interviewData } = await interviewsApi.start(role, experienceLevel, difficulty);
 
-        if (interviewData) setInterviewId(interviewData.id);
-
-        await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'interview_start',
-          title: `Started ${role} interview practice`,
-        });
+        if (interviewData) setInterviewId(interviewData.interview.id);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to start interview');
@@ -182,8 +159,7 @@ export function MockInterviewPage() {
       setEvaluations(updatedEvaluations);
 
       if (user && interviewId) {
-        await supabase.from('interview_questions').insert({
-          interview_id: interviewId,
+        await interviewsApi.saveQuestion(interviewId, {
           question: currentQuestion.question,
           category: currentQuestion.category,
           difficulty: currentQuestion.difficulty,
@@ -192,12 +168,13 @@ export function MockInterviewPage() {
           strengths: evaluation.strengths,
           weaknesses: evaluation.weaknesses,
           suggestions: evaluation.suggestions,
+          question_order: currentQuestionIndex,
         });
       }
 
       const isLastQuestion = currentQuestionIndex >= questions.length - 1;
       if (isLastQuestion) {
-        await finishInterview(updatedEvaluations, questions);
+        await finishInterview(updatedEvaluations);
       } else {
         setCurrentQuestionIndex(prev => prev + 1);
       }
@@ -209,8 +186,7 @@ export function MockInterviewPage() {
   };
 
   const finishInterview = async (
-    allEvaluations: Record<string, Evaluation>,
-    allQuestions: Question[]
+    allEvaluations: Record<string, Evaluation>
   ) => {
     const scores = Object.values(allEvaluations).map(e => e.score);
     const totalScore = scores.length > 0
@@ -218,34 +194,8 @@ export function MockInterviewPage() {
       : 0;
 
     if (user && interviewId) {
-      await supabase.from('mock_interviews').update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        total_score: totalScore,
-      }).eq('id', interviewId);
-
-      await supabase.from('user_activities').insert({
-        user_id: user.id,
-        activity_type: 'interview_complete',
-        title: `Completed ${role} interview practice`,
-        metadata: { score: totalScore, role },
-      });
-
-      const { data: existing } = await supabase
-        .from('career_stats').select('total_interviews, interview_score')
-        .eq('user_id', user.id).maybeSingle();
-
-      if (existing) {
-        const prevTotal = existing.total_interviews || 0;
-        const prevScore = existing.interview_score || 0;
-        const newTotal = prevTotal + 1;
-        const newScore = Math.round((prevScore * prevTotal + totalScore) / newTotal);
-        await supabase.from('career_stats').update({
-          total_interviews: newTotal,
-          interview_score: newScore,
-          updated_at: new Date().toISOString(),
-        }).eq('user_id', user.id);
-      }
+      // The server marks the interview completed, logs the activity and refreshes the career stats
+      await interviewsApi.complete(interviewId, totalScore);
     }
     setStep('results');
   };

@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { Github, Star, Code, AlertTriangle, Award, ExternalLink } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react';
+import { Github, Code, AlertTriangle, Award, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { analyzeGithubProfile } from '../lib/api';
+import { analyzeGithubProfile, saveRecord, logActivity } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -58,8 +57,7 @@ export function GitHubPage() {
       setResult(response.data);
 
       if (user) {
-        await supabase.from('github_analyses').insert({
-          user_id: user.id,
+        await saveRecord('github_analyses', {
           github_url: githubUrl,
           username: username,
           profile_data: response.data.profile_data || {},
@@ -69,12 +67,7 @@ export function GitHubPage() {
           score: response.data.score || 0,
         });
 
-        await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'github_analysis',
-          title: `Analyzed GitHub profile: ${username}`,
-          metadata: { score: response.data.score },
-        });
+        await logActivity('github_analysis', `Analyzed GitHub profile: ${username}`, { score: response.data.score });
       }
 
       setSuccess('Profile analyzed!');

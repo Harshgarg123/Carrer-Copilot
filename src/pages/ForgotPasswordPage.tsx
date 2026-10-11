@@ -46,7 +46,7 @@ export function ForgotPasswordPage() {
               Check your email
             </h2>
             <p className="text-secondary-600 dark:text-secondary-400 mb-6">
-              We've sent a password reset link to <span className="font-medium text-secondary-900 dark:text-white">{email}</span>
+              If an account exists for <span className="font-medium text-secondary-900 dark:text-white">{email}</span>, we've sent a password reset link. It is valid for 1 hour.
             </p>
             <Link
               to="/login"

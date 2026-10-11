@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { FolderGit2, Code, AlertTriangle, Award, Layers, ExternalLink } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react';
+import { FolderGit2, AlertTriangle, Award, Layers, ExternalLink } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { analyzeProject } from '../lib/api';
+import { analyzeProject, saveRecord, logActivity } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -54,8 +53,7 @@ export function ProjectAnalyzerPage() {
       setResult(response.data);
 
       if (user) {
-        await supabase.from('project_analyses').insert({
-          user_id: user.id,
+        await saveRecord('project_analyses', {
           repo_url: repoUrl,
           repo_name: repoName,
           technologies: response.data.technologies || [],
@@ -66,12 +64,7 @@ export function ProjectAnalyzerPage() {
           quality_score: response.data.quality_score || 0,
         });
 
-        await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'project_analysis',
-          title: `Analyzed project: ${repoName}`,
-          metadata: { quality_score: response.data.quality_score },
-        });
+        await logActivity('project_analysis', `Analyzed project: ${repoName}`, { quality_score: response.data.quality_score });
       }
 
       setSuccess('Project analyzed!');

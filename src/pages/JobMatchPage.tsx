@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Target, Zap, Check, X, AlertTriangle, Briefcase } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { analyzeJobMatch } from '../lib/api';
+import { analyzeJobMatch, saveRecord, logActivity, resumesApi } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Textarea } from '../components/ui/Textarea';
@@ -39,14 +38,11 @@ export function JobMatchPage() {
     async function fetchResumes() {
       if (!user) return;
       try {
-        const { data } = await supabase
-          .from('resumes')
-          .select('id, file_name')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        setResumes(data || []);
-        if (data && data.length > 0) {
-          setSelectedResumeId(data[0].id);
+        const { data } = await resumesApi.list();
+        const list = (data?.resumes || []).map(r => ({ id: r.id, file_name: r.file_name }));
+        setResumes(list);
+        if (list.length > 0) {
+          setSelectedResumeId(list[0].id);
         }
       } catch (err) {
         console.error(err);
@@ -70,7 +66,8 @@ export function JobMatchPage() {
         jobDescription,
         undefined,
         jobTitle,
-        company
+        company,
+        selectedResumeId || undefined
       );
 
       if (response.error) {
@@ -81,8 +78,7 @@ export function JobMatchPage() {
 
       // Save to database
       if (user) {
-        await supabase.from('job_matches').insert({
-          user_id: user.id,
+        await saveRecord('job_matches', {
           resume_id: selectedResumeId || null,
           job_description: jobDescription,
           job_title: jobTitle,
@@ -93,12 +89,7 @@ export function JobMatchPage() {
           suggestions: response.data.suggestions,
         });
 
-        await supabase.from('user_activities').insert({
-          user_id: user.id,
-          activity_type: 'job_match',
-          title: `Analyzed match for ${jobTitle || 'position'}${company ? ` at ${company}` : ''}`,
-          metadata: { match_percentage: response.data.match_percentage },
-        });
+        await logActivity('job_match', `Analyzed match for ${jobTitle || 'position'}${company ? ` at ${company}` : ''}`, { match_percentage: response.data.match_percentage });
       }
 
       setSuccess('Analysis complete!');

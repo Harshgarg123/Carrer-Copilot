@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, User, Bot, Trash2, Loader2 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { Send, User, Bot, Trash2, Loader2 } from 'lucide-react';
 import { sendMentorMessage } from '../lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 
@@ -21,7 +20,6 @@ const WELCOME_MESSAGE: Message = {
 };
 
 export function MentorPage() {
-  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

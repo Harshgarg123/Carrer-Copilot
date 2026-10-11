@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Map, Calendar, BookOpen, Target, CheckCircle, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { generateRoadmap } from '../lib/api';
+import { generateRoadmap, saveRecord, logActivity } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -163,18 +162,13 @@ function RoadmapContent() {
       setRoadmap(data);
 
       if (user) {
-        await supabase.from('learning_roadmaps').insert({
-          user_id: user.id,
+        await saveRecord('learning_roadmaps', {
           target_role: targetRole,
           milestones: data.milestones,
           estimated_duration: data.estimated_duration,
           progress: 0,
         });
-        await supabase.from('user_activities').insert({
-  user_id: user.id,
-  activity_type: 'learning_roadmap',
-  title: `Generated roadmap for ${targetRole}`,
-});
+        await logActivity('learning_roadmap', `Generated roadmap for ${targetRole}`);
       }
 
       setSuccess('Roadmap generated!');
